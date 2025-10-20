@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+          <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -456,17 +456,14 @@
         // Check if music file loaded successfully
         bgMusic.addEventListener('error', (e) => {
             console.error('❌ Failed to load music file. Error details:', e);
-            console.error('Attempted sources:', bgMusic.querySelectorAll('source'));
             musicControl.textContent = '❌';
-            musicControl.title = 'Music file not found. Tried: massobeats - honey jam (royalty free lofi music).mp3';
-            alert('Failed to load music file! Check console for details.');
+            musicControl.title = 'Music file not found';
         });
         
         bgMusic.addEventListener('loadeddata', () => {
             console.log('✅ Music file loaded successfully!');
             console.log('Duration:', bgMusic.duration, 'seconds');
             musicControl.title = 'Click to play music';
-            alert('✅ Music loaded! Duration: ' + Math.round(bgMusic.duration) + ' seconds. Click the speaker button to play!');
         });
         
         bgMusic.addEventListener('canplaythrough', () => {
@@ -488,7 +485,7 @@
 
         function toggleMusic() {
             if (!musicStarted) {
-                bgMusic.volume = 0.5; // Increase volume to 50% for testing
+                bgMusic.volume = 0.5; // Set to 50% volume
                 musicStarted = true;
             }
             
