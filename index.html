@@ -1,4 +1,4 @@
-          <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -546,21 +546,57 @@
         function playClickSound() {
             initAudio();
             
-            // Create a simple click sound using oscillator
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+            // Quick click sound (original)
+            const oscillator1 = audioContext.createOscillator();
+            const gainNode1 = audioContext.createGain();
             
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+            oscillator1.connect(gainNode1);
+            gainNode1.connect(audioContext.destination);
             
-            oscillator.frequency.value = 800; // Frequency in Hz
-            oscillator.type = 'sine';
+            oscillator1.frequency.value = 800;
+            oscillator1.type = 'sine';
             
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            gainNode1.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
             
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.1);
+            oscillator1.start(audioContext.currentTime);
+            oscillator1.stop(audioContext.currentTime + 0.1);
+            
+            // New 2-second ambient sound effect
+            playLongClickSound();
+        }
+        
+        function playLongClickSound() {
+            const now = audioContext.currentTime;
+            
+            // Create a pleasant chord progression over 2 seconds
+            const notes = [
+                { freq: 523.25, start: 0, duration: 0.8 },      // C5
+                { freq: 659.25, start: 0.3, duration: 0.8 },    // E5
+                { freq: 783.99, start: 0.6, duration: 1.4 },    // G5
+                { freq: 1046.50, start: 0.9, duration: 1.1 }    // C6
+            ];
+            
+            notes.forEach(note => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                osc.frequency.value = note.freq;
+                osc.type = 'sine';
+                
+                const startTime = now + note.start;
+                const endTime = startTime + note.duration;
+                
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.01, endTime);
+                
+                osc.start(startTime);
+                osc.stop(endTime);
+            });
         }
 
         function playHoverSound() {
