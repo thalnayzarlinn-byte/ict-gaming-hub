@@ -1,0 +1,3122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <meta name="screen-orientation" content="landscape">
+    <title>Cube Chase Waves</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000000;
+            background: linear-gradient(135deg, #0a0015 0%, #000000 50%, #001a1a 100%);
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Orbitron', monospace;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Force landscape orientation message for mobile */
+        #orientationMessage {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        #orientationMessage h2 {
+            color: #00ffff;
+            font-size: 32px;
+            font-family: 'Orbitron', monospace;
+            text-align: center;
+            padding: 20px;
+            text-shadow: 0 0 20px #00ffff;
+        }
+        
+        #orientationMessage .rotate-icon {
+            font-size: 80px;
+            animation: rotateIcon 2s ease-in-out infinite;
+        }
+        
+        @keyframes rotateIcon {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+        
+        /* Show message only on mobile in portrait mode */
+        @media screen and (max-width: 768px) and (orientation: portrait) {
+            #orientationMessage {
+                display: flex !important;
+            }
+            #gameCanvas,
+            #loginScreen,
+            #timer,
+            #livesDisplay,
+            #playerName,
+            #mobileControls,
+            #lowGraphicsToggle,
+            #toggleCheatPanel {
+                display: none !important;
+            }
+        }
+        h1, #wave3Title, #wave4Title {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ffff;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            z-index: 2;
+            text-shadow: 
+                0 0 5px #00ffff,
+                0 0 10px #00ffff,
+                0 0 20px #00ffff,
+                0 0 40px #ff00ff;
+            pointer-events: none;
+            letter-spacing: 4px;
+            animation: titleGlow 3s ease-in-out infinite;
+            background: linear-gradient(90deg, #00ffff, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% auto;
+        }
+        
+        @keyframes titleGlow {
+            0%, 100% { 
+                background-position: 0% center;
+                filter: brightness(1);
+            }
+            50% { 
+                background-position: 100% center;
+                filter: brightness(1.3);
+            }
+        }
+        h1 { top: 30px; font-size: 52px; }
+        #wave3Title, #wave4Title { top: 30px; font-size: 68px; display: none; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        #timer {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            color: #00ffff;
+            font-size: 52px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            z-index: 2;
+            text-shadow: 
+                0 0 5px #00ffff,
+                0 0 10px #00ffff,
+                0 0 20px #00ffff;
+            background: linear-gradient(135deg, rgba(0, 30, 40, 0.8), rgba(10, 0, 30, 0.8));
+            padding: 15px 30px;
+            border-radius: 20px;
+            border: 3px solid rgba(0, 255, 255, 0.5);
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.3),
+                inset 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+        #restartBtn {
+            display: none;
+            position: absolute;
+            left: 50%;
+            top: 55%;
+            transform: translate(-50%, -50%);
+            padding: 25px 70px;
+            font-size: 36px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00ffff 0%, #ff00ff 50%, #00ffff 100%);
+            background-size: 200% auto;
+            color: #000;
+            border: 4px solid #fff;
+            border-radius: 60px;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 
+                0 0 40px rgba(0, 255, 255, 0.6),
+                0 0 60px rgba(255, 0, 255, 0.4),
+                inset 0 0 30px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            animation: buttonGlow 2s ease-in-out infinite;
+        }
+        
+        @keyframes buttonGlow {
+            0%, 100% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+        }
+        
+        #restartBtn:hover {
+            transform: translate(-50%, -50%) scale(1.15);
+            box-shadow: 
+                0 0 60px rgba(0, 255, 255, 0.8),
+                0 0 90px rgba(255, 0, 255, 0.6),
+                inset 0 0 40px rgba(255, 255, 255, 0.4);
+        }
+        #upgradeContainer {
+            display: none;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(0, 20, 30, 0.95), rgba(20, 0, 30, 0.95));
+            border: 4px solid #00ffff;
+            border-radius: 30px;
+            padding: 50px 40px;
+            z-index: 20;
+            text-align: center;
+            box-shadow: 
+                0 0 50px rgba(0, 255, 255, 0.5),
+                0 0 80px rgba(255, 0, 255, 0.3),
+                inset 0 0 40px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+        }
+        .upgrade-btn {
+            margin: 15px;
+            padding: 22px 50px;
+            font-size: 26px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            border-radius: 60px;
+            border: 3px solid #00ffff;
+            background: linear-gradient(135deg, rgba(0, 100, 150, 0.4), rgba(100, 0, 150, 0.4));
+            color: #00ffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 
+                0 0 5px #00ffff,
+                0 0 10px #00ffff;
+            box-shadow: 
+                0 0 25px rgba(0, 255, 255, 0.4),
+                inset 0 0 15px rgba(0, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upgrade-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .upgrade-btn:hover::before {
+            left: 100%;
+        }
+        
+        .upgrade-btn:hover {
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            color: #000;
+            transform: scale(1.1);
+            box-shadow: 
+                0 0 50px rgba(0, 255, 255, 0.8),
+                0 0 70px rgba(255, 0, 255, 0.6);
+            border-color: #fff;
+        }
+        #livesDisplay {
+            position: absolute;
+            left: 40px;
+            top: 30px;
+            color: #ff00ff;
+            font-size: 42px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            z-index: 2;
+            text-shadow: 
+                0 0 5px #ff00ff,
+                0 0 10px #ff00ff,
+                0 0 20px #ff00ff;
+            background: linear-gradient(135deg, rgba(30, 0, 40, 0.8), rgba(10, 0, 30, 0.8));
+            padding: 15px 30px;
+            border-radius: 20px;
+            border: 3px solid rgba(255, 0, 255, 0.5);
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 0 20px rgba(255, 0, 255, 0.3),
+                inset 0 0 20px rgba(255, 0, 255, 0.1);
+        }
+        #e-ui {
+            display: none;
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #00ffff, #0088ff);
+            color: #000;
+            font-size: 28px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            text-align: center;
+            line-height: 36px;
+            z-index: 5;
+            pointer-events: none;
+            box-shadow: 
+                0 0 20px #00ffff,
+                0 0 40px #00ffff,
+                inset 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: dashPulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes dashPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        #bossHealthBar {
+            display: none;
+            position: absolute;
+            left: 50%;
+            top: 80px;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 44px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            background: linear-gradient(135deg, rgba(20, 0, 30, 0.95), rgba(30, 0, 20, 0.95));
+            border: 5px solid #ff00ff;
+            border-radius: 25px;
+            padding: 25px 70px;
+            z-index: 100;
+            text-align: center;
+            box-shadow: 
+                0 0 50px rgba(255, 0, 255, 0.6),
+                0 0 80px rgba(255, 0, 255, 0.4),
+                inset 0 0 30px rgba(255, 0, 255, 0.2);
+            backdrop-filter: blur(20px);
+        }
+        #playerHealthBar {
+            display: none;
+            position: absolute;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(0, 20, 30, 0.95), rgba(0, 30, 20, 0.95));
+            border: 5px solid #00ffff;
+            border-radius: 25px;
+            padding: 25px 70px;
+            z-index: 100;
+            text-align: center;
+            box-shadow: 
+                0 0 50px rgba(0, 255, 255, 0.6),
+                0 0 80px rgba(0, 255, 255, 0.4),
+                inset 0 0 30px rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+        }
+        #playerHealthBar .health-label {
+            color: #00ffff;
+            font-size: 24px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            margin-bottom: 15px;
+            text-shadow: 
+                0 0 5px #00ffff,
+                0 0 10px #00ffff;
+        }
+        #playerHealthBar .health-bar-container {
+            width: 500px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 4px solid rgba(0, 255, 255, 0.6);
+            border-radius: 25px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 
+                inset 0 0 20px rgba(0, 0, 0, 0.9),
+                0 0 15px rgba(0, 255, 255, 0.3);
+        }
+        #playerHealthBar .health-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00ffff, #00ff00);
+            transition: width 0.3s, background 0.3s;
+            box-shadow: 
+                0 0 20px #00ff00,
+                inset 0 0 10px rgba(255, 255, 255, 0.3);
+            animation: healthShimmer 2s ease-in-out infinite;
+        }
+        
+        @keyframes healthShimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+        
+        #playerHealthBar .health-bar-fill.low {
+            background: linear-gradient(90deg, #ff0000, #ff6600, #ff0000);
+            box-shadow: 
+                0 0 20px #ff0000,
+                inset 0 0 10px rgba(255, 255, 255, 0.3);
+            animation: lowHealthPulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes lowHealthPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        #playerHealthBar .health-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 20px;
+            font-weight: 900;
+            font-family: 'Orbitron', monospace;
+            text-shadow: 
+                0 0 5px #000,
+                1px 1px 2px #000,
+                -1px -1px 2px #000;
+        }
+        #loginScreen {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(0, 20, 30, 0.98), rgba(20, 0, 30, 0.98));
+            border: 5px solid #00ffff;
+            border-radius: 35px;
+            padding: 60px 90px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 
+                0 0 80px rgba(0, 255, 255, 0.6),
+                0 0 120px rgba(255, 0, 255, 0.4),
+                inset 0 0 50px rgba(0, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+        }
+        #loginScreen h1 {
+            position: static;
+            transform: none;
+            margin-bottom: 50px;
+            font-size: 64px;
+            background: linear-gradient(135deg, #00ffff, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% auto;
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+        .login-input {
+            display: block;
+            width: 380px;
+            margin: 30px auto;
+            padding: 20px 30px;
+            font-size: 22px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 600;
+            border: 4px solid rgba(0, 255, 255, 0.6);
+            border-radius: 20px;
+            background: rgba(0, 20, 30, 0.6);
+            color: #00ffff;
+            transition: all 0.3s ease;
+            box-shadow: 
+                inset 0 0 20px rgba(0, 0, 0, 0.9),
+                0 0 15px rgba(0, 255, 255, 0.2);
+        }
+        .login-input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 
+                0 0 30px rgba(0, 255, 255, 0.6),
+                inset 0 0 20px rgba(0, 255, 255, 0.2);
+            background: rgba(0, 40, 50, 0.7);
+        }
+        .login-input::placeholder {
+            color: rgba(0, 255, 255, 0.5);
+        }
+        #startGameBtn {
+            margin-top: 40px;
+            padding: 25px 80px;
+            font-size: 32px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00ffff 0%, #ff00ff 50%, #00ffff 100%);
+            background-size: 200% auto;
+            color: #000;
+            border: 4px solid #fff;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 
+                0 0 40px rgba(0, 255, 255, 0.6),
+                0 0 70px rgba(255, 0, 255, 0.4),
+                inset 0 0 30px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            animation: buttonGlow 2s ease-in-out infinite;
+        }
+        #startGameBtn:hover {
+            transform: scale(1.15);
+            box-shadow: 
+                0 0 60px rgba(0, 255, 255, 0.8),
+                0 0 90px rgba(255, 0, 255, 0.6),
+                inset 0 0 40px rgba(255, 255, 255, 0.4);
+        }
+        #playerName {
+            position: absolute;
+            left: 40px;
+            bottom: 30px;
+            color: #00ffff;
+            font-size: 32px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            z-index: 2;
+            text-shadow: 
+                0 0 5px #00ffff,
+                0 0 10px #00ffff,
+                0 0 20px #00ffff;
+            background: linear-gradient(135deg, rgba(0, 30, 40, 0.8), rgba(10, 0, 30, 0.8));
+            padding: 15px 30px;
+            border-radius: 20px;
+            border: 3px solid rgba(0, 255, 255, 0.5);
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.3),
+                inset 0 0 20px rgba(0, 255, 255, 0.1);
+            display: none;
+        }
+        #cheatPanel {
+            display: none;
+            position: absolute;
+            right: 40px;
+            top: 100px;
+            background: linear-gradient(135deg, rgba(0, 30, 0, 0.95), rgba(0, 20, 10, 0.95));
+            border: 4px solid #00ff00;
+            border-radius: 25px;
+            padding: 30px;
+            z-index: 500;
+            min-width: 320px;
+            box-shadow: 
+                0 0 50px rgba(0, 255, 0, 0.5),
+                inset 0 0 30px rgba(0, 255, 0, 0.1);
+            backdrop-filter: blur(20px);
+        }
+        #cheatPanel h2 {
+            color: #00ff00;
+            font-family: 'Orbitron', monospace;
+            font-size: 28px;
+            font-weight: 900;
+            margin: 0 0 25px 0;
+            text-align: center;
+            text-shadow: 
+                0 0 5px #00ff00,
+                0 0 10px #00ff00,
+                0 0 20px #00ff00;
+        }
+        .cheat-btn {
+            display: block;
+            width: 100%;
+            margin: 14px 0;
+            padding: 16px;
+            font-size: 18px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            border: 3px solid #00ff00;
+            border-radius: 15px;
+            background: rgba(0, 60, 0, 0.4);
+            color: #00ff00;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            text-shadow: 0 0 5px #00ff00;
+            box-shadow: 
+                0 0 15px rgba(0, 255, 0, 0.2),
+                inset 0 0 10px rgba(0, 255, 0, 0.1);
+        }
+        .cheat-btn:hover {
+            background: linear-gradient(135deg, #00ff00, #00ff88);
+            color: #000;
+            box-shadow: 
+                0 0 30px rgba(0, 255, 0, 0.6),
+                0 0 50px rgba(0, 255, 0, 0.4);
+            transform: translateX(10px) scale(1.05);
+        }
+        .cheat-btn:active {
+            transform: translateX(8px) scale(0.98);
+        }
+        #toggleCheatPanel {
+            display: none;
+            position: absolute;
+            right: 40px;
+            top: 40px;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 12px;
+            cursor: pointer;
+            z-index: 501;
+            box-shadow: 0 0 15px #00ff00;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        #toggleCheatPanel:hover {
+            background: rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 25px #00ff00;
+        }
+        
+        /* Low Graphics Toggle */
+        #lowGraphicsToggle {
+            position: absolute;
+            left: 40px;
+            top: 100px;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+            border: 2px solid #ffa500;
+            border-radius: 12px;
+            cursor: pointer;
+            z-index: 501;
+            box-shadow: 0 0 15px #ffa500;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        #lowGraphicsToggle:hover {
+            background: rgba(255, 165, 0, 0.4);
+            box-shadow: 0 0 25px #ffa500;
+        }
+        #lowGraphicsToggle.active {
+            background: rgba(255, 165, 0, 0.6);
+            color: #000;
+            box-shadow: 0 0 35px #ffa500;
+        }
+        
+        /* Music Control Button */
+        #musicControl {
+            position: absolute;
+            right: 40px;
+            bottom: 30px;
+            width: 60px;
+            height: 60px;
+            background: rgba(138, 43, 226, 0.3);
+            border: 3px solid #8a2be2;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 501;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        #musicControl:hover {
+            background: rgba(138, 43, 226, 0.5);
+            box-shadow: 0 0 30px rgba(138, 43, 226, 0.8);
+            transform: scale(1.1);
+        }
+        
+        #musicControl.playing {
+            background: rgba(138, 43, 226, 0.6);
+            animation: musicPulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes musicPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(138, 43, 226, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(138, 43, 226, 1), 0 0 60px rgba(138, 43, 226, 0.8); }
+        }
+        
+        /* Low Graphics Mode - Disable effects */
+        body.low-graphics #timer,
+        body.low-graphics #livesDisplay,
+        body.low-graphics #playerName,
+        body.low-graphics h1,
+        body.low-graphics #wave3Title,
+        body.low-graphics #wave4Title {
+            text-shadow: none !important;
+            background: rgba(0, 0, 0, 0.7) !important;
+            border: 2px solid #666 !important;
+            backdrop-filter: none !important;
+            box-shadow: none !important;
+        }
+        
+        body.low-graphics #restartBtn,
+        body.low-graphics #startGameBtn,
+        body.low-graphics .upgrade-btn {
+            background: #333 !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+            border: 2px solid #666 !important;
+        }
+        
+        body.low-graphics #upgradeContainer,
+        body.low-graphics #loginScreen,
+        body.low-graphics #bossHealthBar,
+        body.low-graphics #playerHealthBar {
+            background: rgba(0, 0, 0, 0.9) !important;
+            border: 2px solid #666 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+        
+        body.low-graphics #playerHealthBar .health-bar-fill {
+            background: #0f0 !important;
+            box-shadow: none !important;
+            animation: none !important;
+        }
+        
+        body.low-graphics #playerHealthBar .health-bar-fill.low {
+            background: #f00 !important;
+            animation: none !important;
+        }
+        
+        body.low-graphics #e-ui,
+        body.low-graphics #mobileJoystick,
+        body.low-graphics #mobileDashBtn {
+            background: #333 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            animation: none !important;
+        }
+        
+        body.low-graphics h1,
+        body.low-graphics #wave3Title,
+        body.low-graphics #wave4Title {
+            animation: none !important;
+        }
+        
+        body.low-graphics canvas {
+            box-shadow: none !important;
+        }
+        
+        canvas {
+            display: block;
+            background: #000000;
+            box-shadow: 
+                inset 0 0 100px rgba(0, 100, 150, 0.15),
+                inset 0 0 50px rgba(100, 0, 150, 0.1);
+        }
+        
+        /* Mobile Controls */
+        #mobileControls {
+            display: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        #mobileJoystick {
+            position: absolute;
+            left: 50px;
+            bottom: 80px;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.3), rgba(0, 255, 255, 0.1));
+            border: 4px solid rgba(0, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: all;
+            box-shadow: 
+                0 0 30px rgba(0, 255, 255, 0.5),
+                inset 0 0 20px rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        #joystickKnob {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, #00ffff, #0088ff);
+            border: 4px solid #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 
+                0 0 25px #00ffff,
+                inset 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+        
+        #mobileDashBtn {
+            position: absolute;
+            right: 50px;
+            bottom: 80px;
+            width: 110px;
+            height: 110px;
+            background: radial-gradient(circle, rgba(255, 0, 255, 0.4), rgba(255, 0, 255, 0.2));
+            border: 4px solid #ff00ff;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 44px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+            box-shadow: 
+                0 0 30px #ff00ff,
+                inset 0 0 20px rgba(255, 0, 255, 0.3);
+            backdrop-filter: blur(10px);
+            user-select: none;
+            text-shadow: 
+                0 0 10px #fff,
+                0 0 20px #ff00ff;
+            transition: all 0.2s ease;
+        }
+        
+        #mobileDashBtn:active {
+            background: radial-gradient(circle, rgba(255, 0, 255, 0.8), rgba(255, 0, 255, 0.4));
+            transform: scale(0.95);
+            box-shadow: 
+                0 0 50px #ff00ff,
+                inset 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+        
+        #mobileDashBtn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Landscape Orientation Message for Mobile -->
+    <div id="orientationMessage">
+        <div class="rotate-icon">📱➡️📱</div>
+        <h2>Please rotate your device to landscape mode for the best experience!</h2>
+    </div>
+    
+    <div id="loginScreen">
+        <h1>Cube Chase Waves</h1>
+        <input type="text" id="usernameInput" class="login-input" placeholder="Enter your name" maxlength="20">
+        <input type="password" id="passwordInput" class="login-input" placeholder="Enter password" maxlength="20">
+        <button id="startGameBtn" onclick="startGame()">Start Game</button>
+    </div>
+    <h1 id="waveTitle" style="display: none;">Wave One</h1>
+    <div id="wave4Title">Wave 4</div>
+    <div id="timer">30</div>
+    <div id="livesDisplay"></div>
+    <button id="restartBtn" onclick="restartGame()">Restart</button>
+    <div id="upgradeContainer">
+        <h2 style="color:#fff;" id="upgradeTitle">Choose an Upgrade!</h2>
+        <div id="upgradeButtons"></div>
+    </div>
+    <div id="bossHealthBar">
+        Boss Health: <span id="bossHealthValue">15</span>
+    </div>
+    <div id="playerHealthBar">
+        <div class="health-label">Player Health</div>
+        <div class="health-bar-container">
+            <div class="health-bar-fill" id="healthBarFill"></div>
+            <div class="health-text" id="healthBarText">100 / 100</div>
+        </div>
+    </div>
+    <div id="e-ui">E</div>
+    <div id="playerName"></div>
+    <button id="toggleCheatPanel" onclick="toggleCheats()">🎮 Cheats</button>
+    <button id="lowGraphicsToggle" onclick="toggleLowGraphics()">⚙️ Low Graphics</button>
+    <button id="musicControl" onclick="toggleMusic()" title="Toggle Music">🎵</button>
+    
+    <!-- Mobile Controls -->
+    <div id="mobileControls">
+        <div id="mobileJoystick">
+            <div id="joystickKnob"></div>
+        </div>
+        <div id="mobileDashBtn">E</div>
+    </div>
+    <div id="cheatPanel">
+        <h2>⚡ ADMIN PANEL ⚡</h2>
+        <button class="cheat-btn" onclick="cheat_speed()">⚡ +10% Speed Boost</button>
+        <button class="cheat-btn" onclick="cheat_godMode()">🛡️ God Mode (Invincible)</button>
+        <button class="cheat-btn" onclick="cheat_freezeGame()">❄️ Freeze Game (5s)</button>
+        <button class="cheat-btn" onclick="cheat_skipWave()">⏭️ Skip Current Wave</button>
+        <button class="cheat-btn" onclick="cheat_addLives()">❤️ +5 Extra Lives</button>
+        <button class="cheat-btn" onclick="cheat_killAllEnemies()">💀 Kill All Enemies</button>
+        <button class="cheat-btn" onclick="cheat_oneHitBoss()">💥 One-Hit Boss Kill</button>
+        <button class="cheat-btn" onclick="cheat_slowMotion()">🐌 Slow Motion Toggle</button>
+        <button class="cheat-btn" onclick="cheat_teleport()">🌀 Teleport to Center</button>
+        <button class="cheat-btn" onclick="cheat_maxUpgrades()">🔥 Unlock All Upgrades</button>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        // --- Mobile Detection ---
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                         ('ontouchstart' in window) || 
+                         (navigator.maxTouchPoints > 0);
+        
+        // Mobile cube size multiplier (smaller cubes on mobile)
+        const mobileCubeSizeMultiplier = 0.65; // 35% smaller cubes on mobile
+        
+        // Game State
+        let lowGraphicsMode = false;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        let wave = 1;
+        let timeLeft = 30;
+        let timerInterval = null;
+        let gameOver = false;
+        let lives = 1;
+        let upgrades = { speed: false, dash: false, life: false };
+        let furtherDash = false, moreSpeed = false;
+        let dashCooldown = false;
+        let cubeSize = isMobile ? 40 * mobileCubeSizeMultiplier : 40; // Smaller on mobile
+        let whiteCube, redCubes = [];
+        
+        // Smooth movement system
+        let movementSmoothing = 0.2; // Lower = smoother (0.1-0.5)
+        let velocity = { x: 0, y: 0 };
+        let acceleration = 0.8; // How fast to reach target speed
+        let friction = 0.85; // How fast to slow down
+        let laserPatterns = [], laserActive = false, laserTimeout = null, laserWarningTimeout = null;
+        let laserPatternInterval = null;
+        let eUI = document.getElementById('e-ui');
+        let bossActive = false, boss = null, bossBullets = [], bossHealth = 15, bossPhase2 = false;
+        let bossBulletInterval = null, bossLaserInterval = null, bossGreenCube = null, bossGreenCubeActive = false, bossGreenCubeTimeout = null, bossGreenCubeInterval = null;
+        
+        // Final boss green cubes (multiple)
+        let finalBossGreenCubes = [];
+        let greenCubeTeleportInterval = null;
+        
+        // Wave 6-10 mechanics
+        let bulletRain = [], bulletRainInterval = null;
+        let earthquakeActive = false, earthquakeZones = [], earthquakeInterval = null;
+        let screenShake = { x: 0, y: 0 };
+        let finalBossActive = false, finalBoss = null, finalBossHealth = 1000;
+        
+        // Health system for waves 6-10
+        let playerHealth = 100;
+        let maxPlayerHealth = 100;
+        let damageCooldown = false;
+        let damageCooldownTime = 3000; // 3 seconds
+        
+        // Healing cubes for final boss
+        let healingCubes = [];
+        let healingCubeInterval = null;
+
+        // Add boss movement direction and speed
+        let bossMoveDir = 1; // 1 for right, -1 for left
+        let bossMoveSpeed = 4;
+
+        // Player credentials
+        let playerUsername = "";
+        let playerPassword = "";
+        let gameStarted = false;
+        let isAdmin = false;
+        let godMode = false;
+        let slowMotionActive = false;
+        
+        // Mobile controls state
+        let mobileJoystick = { active: false, x: 0, y: 0, deltaX: 0, deltaY: 0 };
+        let mobileDashReady = true;
+        
+        // Background music
+        let backgroundMusic = null;
+        let musicPlaying = false;
+        let musicInitialized = false;
+        
+        // Click sound effect system
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Play quick click sound (0.05 seconds)
+        function playClickSound() {
+            const now = audioContext.currentTime;
+            
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.frequency.value = 1200; // High frequency for sharp click
+            osc.type = 'sine';
+            
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            
+            osc.start(now);
+            osc.stop(now + 0.05);
+        }
+        
+        // Play quick hover sound (0.03 seconds)
+        function playHoverSound() {
+            const now = audioContext.currentTime;
+            
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.frequency.value = 800; // Lower frequency for hover
+            osc.type = 'sine';
+            
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.03);
+            
+            osc.start(now);
+            osc.stop(now + 0.03);
+        }
+
+        // --- Low Graphics Toggle Function ---
+        function toggleLowGraphics() {
+            playClickSound(); // Play click sound
+            lowGraphicsMode = !lowGraphicsMode;
+            const toggle = document.getElementById('lowGraphicsToggle');
+            
+            if (lowGraphicsMode) {
+                document.body.classList.add('low-graphics');
+                toggle.classList.add('active');
+                toggle.textContent = '⚙️ High Graphics';
+            } else {
+                document.body.classList.remove('low-graphics');
+                toggle.classList.remove('active');
+                toggle.textContent = '⚙️ Low Graphics';
+            }
+        }
+        
+        // --- Music Control Functions ---
+        function initBackgroundMusic() {
+            if (musicInitialized) return;
+            
+            backgroundMusic = new Audio('Better.MP3');
+            backgroundMusic.loop = true;
+            backgroundMusic.volume = 0.3; // 30% volume for background
+            musicInitialized = true;
+            
+            // Handle music loading errors
+            backgroundMusic.addEventListener('error', (e) => {
+                console.log('Background music file not found. Please add Better.MP3 to the project folder.');
+                document.getElementById('musicControl').style.display = 'none';
+            });
+        }
+        
+        function toggleMusic() {
+            playClickSound(); // Play click sound
+            if (!musicInitialized) {
+                initBackgroundMusic();
+            }
+            
+            const musicBtn = document.getElementById('musicControl');
+            
+            if (musicPlaying) {
+                backgroundMusic.pause();
+                musicPlaying = false;
+                musicBtn.classList.remove('playing');
+                musicBtn.textContent = '🎵';
+                musicBtn.title = 'Play Music';
+            } else {
+                backgroundMusic.play().then(() => {
+                    musicPlaying = true;
+                    musicBtn.classList.add('playing');
+                    musicBtn.textContent = '🔊';
+                    musicBtn.title = 'Pause Music';
+                }).catch((error) => {
+                    console.log('Could not play music:', error);
+                });
+            }
+        }
+        
+        // Auto-start music when game starts (after user interaction)
+        function autoStartMusic() {
+            if (!musicInitialized) {
+                initBackgroundMusic();
+            }
+            if (!musicPlaying && backgroundMusic) {
+                toggleMusic();
+            }
+        }
+
+        // --- Start Game Function ---
+        function startGame() {
+            playClickSound(); // Play click sound
+            let username = document.getElementById('usernameInput').value.trim();
+            let password = document.getElementById('passwordInput').value.trim();
+            
+            if (username === "" || password === "") {
+                alert("Please enter both name and password!");
+                return;
+            }
+            
+            playerUsername = username;
+            playerPassword = password;
+            gameStarted = true;
+            
+            // Check for admin credentials
+            if (username === "Haster" && password === "Representative") {
+                isAdmin = true;
+                document.getElementById('toggleCheatPanel').style.display = "block";
+                document.getElementById('cheatPanel').style.display = "block";
+            }
+            
+            // Hide login screen
+            document.getElementById('loginScreen').style.display = "none";
+            
+            // Show player name
+            let nameDisplay = "Player: " + playerUsername;
+            if (isAdmin) nameDisplay += " [ADMIN]";
+            document.getElementById('playerName').textContent = nameDisplay;
+            document.getElementById('playerName').style.display = "block";
+            if (isAdmin) {
+                document.getElementById('playerName').style.color = "#0f0";
+                document.getElementById('playerName').style.textShadow = "0 0 10px #0f0, 0 0 20px #0f0";
+            }
+            
+            // Show wave title
+            document.getElementById('waveTitle').style.display = "block";
+            
+            // Auto-start background music
+            autoStartMusic();
+            
+            // Initialize mobile controls if mobile device
+            if (isMobile) {
+                initMobileControls();
+            }
+            
+            // Start the game
+            setupGame();
+            startTimer();
+            animate();
+        }
+
+        // Allow Enter key to start game
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('usernameInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('passwordInput').focus();
+                }
+            });
+            document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    startGame();
+                }
+            });
+        });
+
+        // --- Cheat Functions ---
+        function toggleCheats() {
+            playClickSound(); // Play click sound
+            let panel = document.getElementById('cheatPanel');
+            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+        }
+
+        function cheat_speed() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            whiteCube.speed *= 1.1;
+            showCheatNotification("⚡ Speed increased by 10%!");
+        }
+
+        function cheat_godMode() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            godMode = !godMode;
+            if (godMode) {
+                showCheatNotification("🛡️ God Mode ENABLED! You are invincible!");
+            } else {
+                showCheatNotification("🛡️ God Mode DISABLED!");
+            }
+        }
+
+        function cheat_freezeGame() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            gameOver = true;
+            showCheatNotification("❄️ Game frozen for 5 seconds!");
+            setTimeout(() => {
+                gameOver = false;
+                animate();
+                showCheatNotification("❄️ Game unfrozen!");
+            }, 5000);
+        }
+
+        function cheat_skipWave() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            if (wave < 10) {
+                clearInterval(timerInterval);
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                if (earthquakeInterval) clearInterval(earthquakeInterval);
+                showCheatNotification("⏭️ Skipping to next wave!");
+                nextWaveOrGameOver();
+            } else {
+                showCheatNotification("⏭️ Already at final wave!");
+            }
+        }
+
+        function cheat_addLives() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            lives += 5;
+            updateLivesDisplay();
+            showCheatNotification("❤️ Added 5 lives!");
+        }
+
+        function cheat_killAllEnemies() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            redCubes = [];
+            showCheatNotification("💀 All enemies eliminated!");
+        }
+
+        function cheat_oneHitBoss() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            if (wave === 4 && bossActive) {
+                bossHealth = 1;
+                document.getElementById('bossHealthValue').textContent = bossHealth;
+                showCheatNotification("💥 Boss health set to 1!");
+            } else if (wave === 10 && finalBossActive) {
+                finalBossHealth = 1;
+                document.getElementById('bossHealthValue').textContent = finalBossHealth;
+                showCheatNotification("💥 Final boss health set to 1!");
+            } else {
+                showCheatNotification("💥 No boss active!");
+            }
+        }
+
+        function cheat_slowMotion() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            slowMotionActive = !slowMotionActive;
+            if (slowMotionActive) {
+                showCheatNotification("🐌 Slow motion ENABLED!");
+            } else {
+                showCheatNotification("🐌 Slow motion DISABLED!");
+            }
+        }
+
+        function cheat_teleport() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            whiteCube.x = width / 2 - cubeSize / 2;
+            whiteCube.y = height / 2 - cubeSize / 2;
+            showCheatNotification("🌀 Teleported to center!");
+        }
+
+        function cheat_maxUpgrades() {
+            playClickSound(); // Play click sound
+            if (!isAdmin) return;
+            upgrades.speed = 2.0;
+            upgrades.dash = true;
+            upgrades.life = true;
+            lives += 10;
+            whiteCube.speed = 12;
+            updateLivesDisplay();
+            showCheatNotification("🔥 All upgrades unlocked!");
+        }
+
+        function showCheatNotification(message) {
+            let notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.position = 'absolute';
+            notification.style.left = '50%';
+            notification.style.top = '50%';
+            notification.style.transform = 'translate(-50%, -50%)';
+            notification.style.background = 'rgba(0, 255, 0, 0.9)';
+            notification.style.color = '#000';
+            notification.style.padding = '20px 40px';
+            notification.style.borderRadius = '10px';
+            notification.style.fontSize = '24px';
+            notification.style.fontFamily = 'Arial, Helvetica, sans-serif';
+            notification.style.fontWeight = 'bold';
+            notification.style.zIndex = '1000';
+            notification.style.boxShadow = '0 0 30px #0f0';
+            notification.style.border = '3px solid #000';
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.remove();
+            }, 2000);
+        }
+
+        // --- Utility ---
+        function randomEdgePosition() {
+            let edge = Math.floor(Math.random() * 4);
+            if (edge === 0) return {x: 0, y: Math.random() * height};
+            if (edge === 1) return {x: width - cubeSize, y: Math.random() * height};
+            if (edge === 2) return {x: Math.random() * width, y: 0};
+            return {x: Math.random() * width, y: height - cubeSize};
+        }
+
+        // --- Setup ---
+        function setupGame() {
+            timeLeft = 30;
+            document.getElementById('timer').textContent = timeLeft;
+            gameOver = false;
+            dashCooldown = false;
+            
+            // Reset velocity for smooth movement
+            velocity = { x: 0, y: 0 };
+            
+            // Adjust cube size based on wave and device
+            let baseCubeSize = 40;
+            if (wave === 2) baseCubeSize = 60;
+            
+            // Apply mobile size reduction
+            cubeSize = isMobile ? baseCubeSize * mobileCubeSizeMultiplier : baseCubeSize;
+            
+            // Calculate speed with upgrades
+            let baseSpeed = 6;
+            if (upgrades.speed) baseSpeed *= upgrades.speed;
+            whiteCube = {
+                x: width / 2 - cubeSize / 2,
+                y: height / 2 - cubeSize / 2,
+                color: "#fff",
+                speed: baseSpeed,
+                dx: 0,
+                dy: 0
+            };
+            redCubes = [];
+            let redCubeCount = 3;
+            let redCubeSize = 40;
+            let redCubeSpeed = 3.5;
+            
+            // Spawn red cubes for waves 1, 2, 3
+            if (wave === 1) {
+                redCubeCount = 3;
+                redCubeSize = 40;
+                redCubeSpeed = 3.5;
+            } else if (wave === 2) {
+                redCubeCount = 6;
+                redCubeSize = 60;
+                redCubeSpeed = 4.5;
+            } else if (wave === 3) {
+                redCubeCount = 5;
+                redCubeSize = 45;
+                redCubeSpeed = 4.8;
+            }
+            
+            // Spawn red cubes for waves 1, 2, and 3
+            if (wave === 1 || wave === 2 || wave === 3) {
+                for (let i = 0; i < redCubeCount; i++) {
+                    let pos = randomEdgePosition();
+                    let actualSize = isMobile ? redCubeSize * mobileCubeSizeMultiplier : redCubeSize;
+                    redCubes.push({
+                        x: pos.x,
+                        y: pos.y,
+                        color: "#f00",
+                        speed: redCubeSpeed + Math.random(),
+                        size: actualSize
+                    });
+                }
+            }
+            document.getElementById('restartBtn').style.display = "none";
+            document.getElementById('upgradeContainer').style.display = "none";
+            document.getElementById('bossHealthBar').style.display = "none";
+            if (wave >= 6 && wave <= 10) {
+                document.getElementById('playerHealthBar').style.display = "none";
+            }
+            updateLivesDisplay();
+            
+            // Clear wave 6-10 mechanics
+            bulletRain = [];
+            earthquakeZones = [];
+            earthquakeActive = false;
+            screenShake = { x: 0, y: 0 };
+            if (bulletRainInterval) clearInterval(bulletRainInterval);
+            if (earthquakeInterval) clearInterval(earthquakeInterval);
+
+            // Only show wave heading for waves 1, 2, 3
+            document.getElementById('waveTitle').style.display = "none";
+            // Hide boss wave headings
+            document.getElementById('wave4Title').style.display = "none";
+            let waveErrorTitle = document.getElementById('waveErrorTitle');
+            if (waveErrorTitle) waveErrorTitle.style.display = "none";
+
+            laserPatterns = [];
+            laserActive = false;
+            if (laserTimeout) clearTimeout(laserTimeout);
+            if (laserWarningTimeout) clearTimeout(laserWarningTimeout);
+            if (laserPatternInterval) clearInterval(laserPatternInterval);
+            if (bossBulletInterval) clearInterval(bossBulletInterval);
+            if (bossLaserInterval) clearInterval(bossLaserInterval);
+            if (bossGreenCubeTimeout) clearTimeout(bossGreenCubeTimeout);
+        }
+
+        // --- Timer ---
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    nextWaveOrGameOver();
+                }
+            }, 1000);
+        }
+
+        // --- Movement Controls ---
+        // Use a key state map for smoother and more responsive controls
+        let keyState = {};
+
+        document.addEventListener('keydown', e => {
+            keyState[e.key.toLowerCase()] = true;
+
+            // Dash ability with "e" key (trigger on keydown)
+            if (upgrades.dash && !dashCooldown && (e.key === "e" || e.key === "E")) {
+                performDash();
+            }
+        });
+
+        document.addEventListener('keyup', e => {
+            keyState[e.key.toLowerCase()] = false;
+        });
+        
+        // Dash function
+        function performDash() {
+            if (!upgrades.dash || dashCooldown) return;
+            
+            dashCooldown = true;
+            let dashX = 0, dashY = 0;
+            
+            if (isMobile) {
+                // Use joystick direction for mobile
+                dashX = mobileJoystick.deltaX;
+                dashY = mobileJoystick.deltaY;
+                if (dashX === 0 && dashY === 0) {
+                    dashX = 1; // Default forward if no direction
+                }
+            } else {
+                // Use keyboard for desktop
+                if (keyState["arrowright"] || keyState["d"]) dashX = 1;
+                else if (keyState["arrowleft"] || keyState["a"]) dashX = -1;
+                if (keyState["arrowdown"] || keyState["s"]) dashY = 1;
+                else if (keyState["arrowup"] || keyState["w"]) dashY = -1;
+            }
+            
+            let dashDistance = 120;
+            if ((wave === 3 && furtherDash) || (wave === 4 && (furtherDash || moreSpeed))) dashDistance = 220;
+            
+            // Apply dash with momentum
+            let dashVelocityX = dashX * dashDistance;
+            let dashVelocityY = dashY * dashDistance;
+            
+            // Smooth multi-step dash for better control
+            let dashSteps = 8; // Number of frames to complete dash
+            let currentStep = 0;
+            
+            let dashInterval = setInterval(() => {
+                if (currentStep >= dashSteps) {
+                    clearInterval(dashInterval);
+                    return;
+                }
+                
+                whiteCube.x += dashVelocityX / dashSteps;
+                whiteCube.y += dashVelocityY / dashSteps;
+                
+                // Boundary checks
+                if (whiteCube.x < 0) whiteCube.x = 0;
+                if (whiteCube.x > width - cubeSize) whiteCube.x = width - cubeSize;
+                if (whiteCube.y < 0) whiteCube.y = 0;
+                if (whiteCube.y > height - cubeSize) whiteCube.y = height - cubeSize;
+                
+                currentStep++;
+            }, 16); // ~60fps
+            
+            // Update mobile dash button state
+            if (isMobile) {
+                mobileDashReady = false;
+                document.getElementById('mobileDashBtn').classList.add('disabled');
+            }
+            
+            setTimeout(() => { 
+                dashCooldown = false;
+                if (isMobile) {
+                    mobileDashReady = true;
+                    document.getElementById('mobileDashBtn').classList.remove('disabled');
+                }
+            }, 1200);
+        }
+
+        // Update moveWhiteCube to use keyState for instant response with smooth acceleration
+        function moveWhiteCube() {
+            let targetDx = 0, targetDy = 0;
+            
+            if (isMobile) {
+                // Use joystick for mobile
+                targetDx = mobileJoystick.deltaX * whiteCube.speed;
+                targetDy = mobileJoystick.deltaY * whiteCube.speed;
+            } else {
+                // Use keyboard for desktop
+                if (keyState["arrowup"] || keyState["w"]) targetDy -= whiteCube.speed;
+                if (keyState["arrowdown"] || keyState["s"]) targetDy += whiteCube.speed;
+                if (keyState["arrowleft"] || keyState["a"]) targetDx -= whiteCube.speed;
+                if (keyState["arrowright"] || keyState["d"]) targetDx += whiteCube.speed;
+            }
+            
+            // Smooth acceleration towards target velocity
+            velocity.x += (targetDx - velocity.x) * acceleration;
+            velocity.y += (targetDy - velocity.y) * acceleration;
+            
+            // Apply friction when no input
+            if (targetDx === 0) velocity.x *= friction;
+            if (targetDy === 0) velocity.y *= friction;
+            
+            // Apply velocity to position
+            whiteCube.x += velocity.x;
+            whiteCube.y += velocity.y;
+            
+            // Boundary checks with smooth clamping
+            if (whiteCube.x < 0) {
+                whiteCube.x = 0;
+                velocity.x = 0;
+            }
+            if (whiteCube.x > width - cubeSize) {
+                whiteCube.x = width - cubeSize;
+                velocity.x = 0;
+            }
+            if (whiteCube.y < 0) {
+                whiteCube.y = 0;
+                velocity.y = 0;
+            }
+            if (whiteCube.y > height - cubeSize) {
+                whiteCube.y = height - cubeSize;
+                velocity.y = 0;
+            }
+        }
+        function moveRedCubes() {
+            // Apply slow motion if active
+            let speedMultiplier = (slowMotionActive && isAdmin) ? 0.3 : 1;
+            for (let cube of redCubes) {
+                let dx = whiteCube.x - cube.x;
+                let dy = whiteCube.y - cube.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                    cube.x += (dx / dist) * cube.speed * speedMultiplier;
+                    cube.y += (dy / dist) * cube.speed * speedMultiplier;
+                }
+            }
+        }
+        function checkCollision() {
+            for (let cube of redCubes) {
+                if (
+                    whiteCube.x < cube.x + cube.size &&
+                    whiteCube.x + cubeSize > cube.x &&
+                    whiteCube.y < cube.y + cube.size &&
+                    whiteCube.y + cubeSize > cube.y
+                ) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        function updateLivesDisplay() {
+            document.getElementById('livesDisplay').textContent = "Lives: " + lives;
+        }
+        
+        // Health system functions
+        function updateHealthBar() {
+            let healthBarFill = document.getElementById('healthBarFill');
+            let healthBarText = document.getElementById('healthBarText');
+            let percentage = (playerHealth / maxPlayerHealth) * 100;
+            
+            healthBarFill.style.width = percentage + "%";
+            healthBarText.textContent = playerHealth + " / " + maxPlayerHealth;
+            
+            if (percentage <= 30) {
+                healthBarFill.classList.add('low');
+            } else {
+                healthBarFill.classList.remove('low');
+            }
+        }
+        
+        function takeDamage(amount) {
+            if (godMode && isAdmin) {
+                showCheatNotification("🛡️ God Mode protected you!");
+                return false;
+            }
+            
+            if (damageCooldown) return false;
+            
+            playerHealth -= amount;
+            if (playerHealth < 0) playerHealth = 0;
+            updateHealthBar();
+            
+            // Activate damage cooldown
+            damageCooldown = true;
+            setTimeout(() => {
+                damageCooldown = false;
+            }, damageCooldownTime);
+            
+            // Flash effect
+            whiteCube.color = "#f00";
+            setTimeout(() => {
+                whiteCube.color = "#fff";
+            }, 200);
+            
+            if (playerHealth <= 0) {
+                return true; // Player died
+            }
+            return false;
+        }
+
+        // --- Draw Cube ---
+        function drawCube(cube) {
+            ctx.save();
+            ctx.fillStyle = cube.color;
+            if (!lowGraphicsMode) {
+                ctx.shadowColor = cube.color;
+                ctx.shadowBlur = 20;
+            }
+            let size = cube.size || cubeSize;
+            ctx.fillRect(cube.x, cube.y, size, size);
+            ctx.restore();
+        }
+
+        // --- Lasers ---
+        function spawnLaserPatterns() {
+            // Boss phase 2: always spawn patterns (Wave 5)
+            if (wave === 5 && bossActive && bossPhase2) {
+                laserPatterns = [];
+                let patternCount = Math.floor(Math.random() * 3) + 3; // 3-5
+                let patternTypes = ["vertical", "horizontal", "down"];
+                for (let i = 0; i < patternCount; i++) {
+                    let type = patternTypes[Math.floor(Math.random() * patternTypes.length)];
+                    if (type === "vertical") {
+                        let offsetX = (Math.random() - 0.5) * 200;
+                        let targetX = whiteCube.x + cubeSize / 2 + offsetX;
+                        targetX = Math.max(0, Math.min(width, targetX));
+                        laserPatterns.push({
+                            type: "vertical",
+                            x1: targetX,
+                            y1: 0,
+                            x2: targetX,
+                            y2: height
+                        });
+                    } else if (type === "horizontal") {
+                        let offsetY = (Math.random() - 0.5) * 200;
+                        let targetY = whiteCube.y + cubeSize / 2 + offsetY;
+                        targetY = Math.max(0, Math.min(height, targetY));
+                        laserPatterns.push({
+                            type: "horizontal",
+                            x1: 0,
+                            y1: targetY,
+                            x2: width,
+                            y2: targetY
+                        });
+                    } else if (type === "down") {
+                        let offset = (Math.random() - 0.5) * 200;
+                        let startX = whiteCube.x + cubeSize / 2 + offset;
+                        let startY = 0;
+                        let endX = startX + height;
+                        let endY = height;
+                        laserPatterns.push({
+                            type: "down",
+                            x1: startX,
+                            y1: startY,
+                            x2: endX,
+                            y2: endY
+                        });
+                    }
+                }
+                laserActive = false;
+                setTimeout(() => {
+                    laserActive = true;
+                    laserTimeout = setTimeout(() => {
+                        checkLaserHit();
+                        laserActive = false;
+                        laserPatterns = [];
+                    }, 500);
+                }, 500);
+                return;
+            }
+            // Normal wave 2/3/4/6-10 logic
+            if (wave < 2) return;
+            laserPatterns = [];
+            let patternCount = 3;
+            let patternTypes = ["vertical"];
+            
+            // Adjust patterns based on wave
+            if (wave === 2) {
+                patternCount = 2;
+                patternTypes = ["vertical"];
+            } else if (wave === 3) {
+                patternCount = 3;
+                patternTypes = ["vertical", "horizontal"];
+            } else if (wave === 4) {
+                patternCount = Math.floor(Math.random() * 3) + 4; // 4-6 patterns
+                patternTypes = ["vertical", "horizontal", "down"];
+            } else if (wave >= 6) {
+                patternCount = Math.floor(Math.random() * 3) + 3;
+                patternTypes = ["vertical", "horizontal", "down"];
+            }
+            
+            for (let i = 0; i < patternCount; i++) {
+                let type = patternTypes[Math.floor(Math.random() * patternTypes.length)];
+                if (type === "vertical") {
+                    let offsetX = (Math.random() - 0.5) * 200;
+                    let targetX = whiteCube.x + cubeSize / 2 + offsetX;
+                    targetX = Math.max(0, Math.min(width, targetX));
+                    laserPatterns.push({
+                        type: "vertical",
+                        x1: targetX,
+                        y1: 0,
+                        x2: targetX,
+                        y2: height
+                    });
+                } else if (type === "horizontal") {
+                    let offsetY = (Math.random() - 0.5) * 200;
+                    let targetY = whiteCube.y + cubeSize / 2 + offsetY;
+                    targetY = Math.max(0, Math.min(height, targetY));
+                    laserPatterns.push({
+                        type: "horizontal",
+                        x1: 0,
+                        y1: targetY,
+                        x2: width,
+                        y2: targetY
+                    });
+                } else if (type === "down") {
+                    let offset = (Math.random() - 0.5) * 200;
+                    let startX = whiteCube.x + cubeSize / 2 + offset;
+                    let startY = 0;
+                    let endX = startX + height;
+                    let endY = height;
+                    laserPatterns.push({
+                        type: "down",
+                        x1: startX,
+                        y1: startY,
+                        x2: endX,
+                        y2: endY
+                    });
+                }
+            }
+            laserActive = false;
+            setTimeout(() => {
+                laserActive = true;
+                laserTimeout = setTimeout(() => {
+                    if (laserActive) checkLaserHit();
+                    laserActive = false;
+                    laserPatterns = [];
+                }, 500);
+            }, 1000);
+        }
+        function drawLaserPatterns() {
+            if (laserPatterns.length === 0) return;
+            for (let i = 0; i < laserPatterns.length; i++) {
+                ctx.save();
+                if (laserActive) {
+                    ctx.strokeStyle = "#f00";
+                    ctx.lineWidth = 10;
+                    if (!lowGraphicsMode) {
+                        ctx.shadowColor = "#f00";
+                        ctx.shadowBlur = 20;
+                    }
+                } else {
+                    ctx.strokeStyle = "#ff0";
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([20, 20]);
+                }
+                ctx.beginPath();
+                ctx.moveTo(laserPatterns[i].x1, laserPatterns[i].y1);
+                ctx.lineTo(laserPatterns[i].x2, laserPatterns[i].y2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
+        }
+        function checkLaserHit() {
+            for (let i = 0; i < laserPatterns.length; i++) {
+                let pattern = laserPatterns[i];
+                let hit = false;
+                if (pattern.type === "vertical") {
+                    let lx = pattern.x1;
+                    if (whiteCube.x < lx && whiteCube.x + cubeSize > lx) {
+                        hit = true;
+                    }
+                } else if (pattern.type === "horizontal") {
+                    let ly = pattern.y1;
+                    if (whiteCube.y < ly && whiteCube.y + cubeSize > ly) {
+                        hit = true;
+                    }
+                } else if (pattern.type === "down") {
+                    let relX = whiteCube.x + cubeSize / 2;
+                    let relY = whiteCube.y + cubeSize / 2;
+                    let b = pattern.y1 - pattern.x1;
+                    let dist = Math.abs(relY - (relX + b));
+                    if (dist < cubeSize) {
+                        hit = true;
+                    }
+                }
+                
+                if (hit) {
+                    // Wave 5 boss fight uses health system - 10 damage per hit
+                    if (wave === 5 && bossActive) {
+                        if (!damageCooldown && takeDamage(10)) {
+                            loseLife();
+                        }
+                    } else if (wave >= 6 && wave <= 10) {
+                        // Lasers do continuous damage - 10 damage per frame while touching
+                        if (takeDamage(10)) {
+                            loseLife();
+                        }
+                    } else {
+                        // Waves 1-4: instant death
+                        loseLife();
+                    }
+                    return;
+                }
+            }
+        }
+
+        // --- Boss ---
+        function startBossWave() {
+            bossActive = true;
+            bossHealth = 15;
+            bossPhase2 = false;
+            
+            // Give player 100 HP for boss fight (health system)
+            playerHealth = 100;
+            maxPlayerHealth = 100;
+            damageCooldown = false;
+            
+            // Show player health bar
+            document.getElementById('playerHealthBar').style.display = "block";
+            updateHealthBar();
+            
+            // Hide lives display for boss fight
+            document.getElementById('livesDisplay').style.display = "none";
+            
+            // Initialize healing cubes for Wave 5
+            healingCubes = [];
+            healingCubeInterval = setInterval(() => { spawnHealingCube(); }, 10000); // Every 10 seconds
+            
+            document.getElementById('bossHealthBar').style.display = "block";
+            document.getElementById('bossHealthValue').textContent = bossHealth;
+            document.getElementById('timer').textContent = "ERROR";
+            // Stop the timer during boss fight
+            if (timerInterval) clearInterval(timerInterval);
+            
+            // Boss size scaled for mobile
+            let bossSize = isMobile ? 200 * mobileCubeSizeMultiplier : 200;
+            let bossX = width / 2 - bossSize / 2;
+            boss = { x: bossX, y: 80, size: bossSize, color: "#0ff" };
+            bossBullets = [];
+            bossGreenCube = null;
+            bossGreenCubeActive = false;
+            bossMoveDir = 1; // Reset direction
+            bossBulletInterval = setInterval(() => { shootBossBullets(); }, 1200);
+            bossGreenCubeTimeout = setTimeout(() => { spawnBossGreenCube(); }, 5000);
+
+            // Remove "Wave 4" and "Wave 2" titles if present
+            document.getElementById('wave4Title').style.display = "none";
+            let wave2Title = document.getElementById('wave2Title');
+            if (wave2Title) wave2Title.style.display = "none";
+
+            // Add or show "Wave ERROR" at top center
+            let waveErrorTitle = document.getElementById('waveErrorTitle');
+            if (!waveErrorTitle) {
+                waveErrorTitle = document.createElement("h1");
+                waveErrorTitle.id = "waveErrorTitle";
+                waveErrorTitle.style.position = "absolute";
+                waveErrorTitle.style.top = "30px";
+                waveErrorTitle.style.left = "50%";
+                waveErrorTitle.style.transform = "translateX(-50%)";
+                waveErrorTitle.style.color = "#fff";
+                waveErrorTitle.style.fontSize = "48px";
+                waveErrorTitle.style.fontFamily = "'Orbitron', monospace";
+                waveErrorTitle.style.fontWeight = "900";
+                waveErrorTitle.style.zIndex = "2";
+                waveErrorTitle.style.textShadow = "0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #ff00ff";
+                waveErrorTitle.style.pointerEvents = "none";
+                waveErrorTitle.textContent = "Wave ERROR";
+                document.body.appendChild(waveErrorTitle);
+            } else {
+                waveErrorTitle.style.display = "block";
+            }
+            
+            // Show boss announcement
+            showWaveTitle("Wave 5 - FIRST BOSS");
+        }
+        function shootBossBullets() {
+            if (!bossActive) return;
+            let angles = [];
+            if (!bossPhase2) {
+                angles = [
+                    0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4,
+                    Math.atan2(1,2), Math.atan2(-1,2)
+                ];
+            } else {
+                for (let i = 0; i < 16; i++) {
+                    angles.push((2 * Math.PI / 16) * i);
+                }
+            }
+            let centerX = boss.x + boss.size / 2;
+            let centerY = boss.y + boss.size / 2;
+            let bulletSize = isMobile ? 18 * mobileCubeSizeMultiplier : 18;
+            for (let i = 0; i < angles.length; i++) {
+                let angle = angles[i];
+                bossBullets.push({
+                    x: centerX,
+                    y: centerY,
+                    size: bulletSize,
+                    color: "#f0f",
+                    dx: Math.cos(angle) * 7,
+                    dy: Math.sin(angle) * 7
+                });
+            }
+        }
+        function spawnBossGreenCube() {
+            // Works for both wave 5 boss and wave 10 final boss
+            if (!bossActive && !finalBossActive) return;
+            
+            // For Wave 10 final boss, spawn 2 green cubes
+            if (wave === 10 && finalBossActive) {
+                // Clear old cubes
+                finalBossGreenCubes = [];
+                
+                // Spawn 2 green cubes at different locations
+                for (let i = 0; i < 2; i++) {
+                    let edge = Math.floor(Math.random() * 4);
+                    let x, y;
+                    let size = isMobile ? 40 * mobileCubeSizeMultiplier : 40;
+                    
+                    if (edge === 0) { x = 0; y = Math.random() * (height - size); }
+                    else if (edge === 1) { x = width - size; y = Math.random() * (height - size); }
+                    else if (edge === 2) { x = Math.random() * (width - size); y = 0; }
+                    else { x = Math.random() * (width - size); y = height - size; }
+                    
+                    finalBossGreenCubes.push({ x, y, size, color: "#0f0", active: true });
+                }
+            } else {
+                // Wave 5 boss - single green cube
+                let edge = Math.floor(Math.random() * 4);
+                let x, y;
+                let size = isMobile ? 40 * mobileCubeSizeMultiplier : 40;
+                if (edge === 0) { x = 0; y = Math.random() * (height - size); }
+                else if (edge === 1) { x = width - size; y = Math.random() * (height - size); }
+                else if (edge === 2) { x = Math.random() * (width - size); y = 0; }
+                else { x = Math.random() * (width - size); y = height - size; }
+                bossGreenCube = { x, y, size, color: "#0f0" };
+                bossGreenCubeActive = true;
+            }
+        }
+        function drawBoss() {
+            if (!bossActive || !boss) return;
+            ctx.save();
+            ctx.fillStyle = boss.color;
+            if (!lowGraphicsMode) {
+                ctx.shadowColor = "#0ff";
+                ctx.shadowBlur = 30;
+            }
+            ctx.fillRect(boss.x, boss.y, boss.size, boss.size);
+            ctx.restore();
+        }
+        function drawBossBullets() {
+            for (let i = 0; i < bossBullets.length; i++) {
+                let b = bossBullets[i];
+                ctx.save();
+                ctx.fillStyle = b.color;
+                if (!lowGraphicsMode) {
+                    ctx.shadowColor = "#f0f";
+                    ctx.shadowBlur = 10;
+                }
+                ctx.fillRect(b.x, b.y, b.size, b.size);
+                ctx.restore();
+            }
+        }
+        function moveBossBullets() {
+            // Apply slow motion if active
+            let speedMultiplier = (slowMotionActive && isAdmin) ? 0.3 : 1;
+            for (let i = 0; i < bossBullets.length; i++) {
+                bossBullets[i].x += bossBullets[i].dx * speedMultiplier;
+                bossBullets[i].y += bossBullets[i].dy * speedMultiplier;
+            }
+            bossBullets = bossBullets.filter(b =>
+                b.x + b.size > 0 && b.x < width && b.y + b.size > 0 && b.y < height
+            );
+        }
+        function drawBossGreenCube() {
+            // Draw Wave 5 single green cube
+            if (bossGreenCubeActive && bossGreenCube) {
+                ctx.save();
+                ctx.fillStyle = bossGreenCube.color;
+                if (!lowGraphicsMode) {
+                    ctx.shadowColor = "#0f0";
+                    ctx.shadowBlur = 20;
+                }
+                ctx.fillRect(bossGreenCube.x, bossGreenCube.y, bossGreenCube.size, bossGreenCube.size);
+                ctx.restore();
+            }
+            
+            // Draw Wave 10 multiple green cubes
+            if (wave === 10 && finalBossActive) {
+                for (let cube of finalBossGreenCubes) {
+                    if (cube.active) {
+                        ctx.save();
+                        ctx.fillStyle = cube.color;
+                        if (!lowGraphicsMode) {
+                            ctx.shadowColor = "#0f0";
+                            ctx.shadowBlur = 20;
+                        }
+                        ctx.fillRect(cube.x, cube.y, cube.size, cube.size);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+        function checkBossGreenCubeCollision() {
+            if (!bossGreenCubeActive || !bossGreenCube) return;
+            if (
+                whiteCube.x < bossGreenCube.x + bossGreenCube.size &&
+                whiteCube.x + cubeSize > bossGreenCube.x &&
+                whiteCube.y < bossGreenCube.y + bossGreenCube.size &&
+                whiteCube.y + cubeSize > bossGreenCube.y
+            ) {
+                let damage = (bossHealth < 10) ? 2 : 1;
+                bossHealth -= damage;
+                if (bossHealth < 0) bossHealth = 0;
+                document.getElementById('bossHealthValue').textContent = bossHealth;
+                bossGreenCubeActive = false;
+                bossGreenCube = null;
+                if (bossHealth > 0) {
+                    bossGreenCubeTimeout = setTimeout(() => { spawnBossGreenCube(); }, 5000);
+                }
+                if (bossHealth < 10 && !bossPhase2) {
+                    bossPhase2 = true;
+                    if (bossLaserInterval) clearInterval(bossLaserInterval);
+                    bossLaserInterval = setInterval(spawnLaserPatterns, 1200);
+                }
+                if (bossHealth <= 0) {
+                    bossActive = false;
+                    gameOver = true;
+                    document.getElementById('bossHealthBar').style.display = "none";
+                    document.getElementById('livesDisplay').style.display = "none"; // Hide lives after first boss
+                    document.getElementById('timer').textContent = "Wave 5 Complete!";
+                    clearInterval(bossBulletInterval);
+                    if (bossLaserInterval) clearInterval(bossLaserInterval);
+                    if (bossGreenCubeTimeout) clearTimeout(bossGreenCubeTimeout);
+                    if (healingCubeInterval) clearInterval(healingCubeInterval); // Clear healing cube spawning
+                    // Continue to wave 6
+                    setTimeout(() => {
+                        wave = 6;
+                        playerHealth = 250;
+                        maxPlayerHealth = 250;
+                        damageCooldown = false;
+                        if (laserPatternInterval) clearInterval(laserPatternInterval);
+                        setupGame();
+                        startTimer();
+                        document.getElementById('playerHealthBar').style.display = "block";
+                        updateHealthBar();
+                        laserPatternInterval = setInterval(spawnLaserPatterns, 2000);
+                        setTimeout(() => { spawnRedCubesWave6(); }, 1000);
+                        showWaveTitle("Wave 6 - Hell Begins");
+                        gameOver = false;
+                        animate();
+                    }, 2000);
+                }
+            }
+        }
+        function checkBossBulletsCollision() {
+            for (let i = 0; i < bossBullets.length; i++) {
+                let b = bossBullets[i];
+                if (
+                    whiteCube.x < b.x + b.size &&
+                    whiteCube.x + cubeSize > b.x &&
+                    whiteCube.y < b.y + b.size &&
+                    whiteCube.y + cubeSize > b.y
+                ) {
+                    // Wave 5 boss fight uses health system - 10 damage per hit
+                    if (wave === 5 && bossActive) {
+                        if (!damageCooldown && takeDamage(10)) {
+                            loseLife();
+                        }
+                    } else if (wave >= 6 && wave <= 10) {
+                        if (!damageCooldown && takeDamage(20)) {
+                            loseLife();
+                        }
+                    } else {
+                        loseLife();
+                    }
+                    if (gameOver) return;
+                }
+            }
+        }
+
+        // --- Main Animate ---
+        function animate() {
+            ctx.save();
+            ctx.translate(screenShake.x, screenShake.y);
+            
+            // Fill canvas with black background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(-screenShake.x, -screenShake.y, width + Math.abs(screenShake.x) * 2, height + Math.abs(screenShake.y) * 2);
+            
+            moveWhiteCube();
+            
+            // Red cubes for waves 1, 2, 3, 6, 8, 9
+            if (wave <= 3 || wave === 6 || wave === 8 || wave === 9) {
+                moveRedCubes();
+                for (let cube of redCubes) drawCube(cube);
+            }
+            
+            drawCube(whiteCube);
+            
+            if (wave >= 2) drawLaserPatterns();
+            
+            // Bullet rain for waves 7, 9
+            if (wave === 7 || wave === 9 || wave === 10) {
+                moveBulletRain();
+                drawBulletRain();
+                checkBulletRainCollision();
+            }
+            
+            // Earthquake for waves 8, 9
+            if (wave === 8 || wave === 9 || wave === 10) {
+                drawEarthquake();
+            }
+            
+            if (upgrades.dash) {
+                eUI.style.display = "block";
+                eUI.style.left = (canvas.offsetLeft + whiteCube.x + cubeSize + 12) + "px";
+                eUI.style.top = (canvas.offsetTop + whiteCube.y + cubeSize / 2 - 16) + "px";
+            } else {
+                eUI.style.display = "none";
+            }
+            
+            // Collision checks
+            if (wave >= 6 && wave <= 10) {
+                // Health bar system for waves 6-10
+                if (checkCollision() && !damageCooldown) {
+                    if (takeDamage(20)) {
+                        loseLife();
+                        if (gameOver) return;
+                    }
+                }
+            } else if (wave <= 3 && checkCollision()) {
+                // Old lives system for waves 1-3
+                loseLife();
+                if (gameOver) return;
+            }
+            
+            // Wave 5 Boss logic
+            if (wave === 5 && bossActive) {
+                moveBoss();
+                drawBoss();
+                drawBossBullets();
+                moveBossBullets();
+                drawBossGreenCube();
+                drawHealingCubes();
+                checkBossGreenCubeCollision();
+                checkHealingCubeCollision();
+                checkBossBulletsCollision();
+            }
+            
+            // Wave 10 Final Boss logic
+            if (wave === 10 && finalBossActive) {
+                moveFinalBoss();
+                drawFinalBoss();
+                drawBossBullets();
+                moveBossBullets();
+                drawBossGreenCube();
+                drawHealingCubes();
+                checkFinalBossGreenCubeCollision();
+                checkHealingCubeCollision();
+                checkBossBulletsCollision();
+            }
+            
+            ctx.restore();
+            
+            if (!gameOver) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        // --- Boss Movement ---
+        function moveBoss() {
+            if (!boss) return;
+            boss.x += bossMoveDir * bossMoveSpeed;
+            if (boss.x <= 0) {
+                boss.x = 0;
+                bossMoveDir = 1;
+            }
+            if (boss.x + boss.size >= width) {
+                boss.x = width - boss.size;
+                bossMoveDir = -1;
+            }
+        }
+
+        // --- Wave Progression ---
+        function nextWaveOrGameOver() {
+            if (wave === 1) {
+                // Pause and show upgrades for wave 2 (choose ONE)
+                gameOver = true;
+                document.getElementById('upgradeTitle').textContent = "Choose an Upgrade!";
+                document.getElementById('upgradeButtons').innerHTML = `
+                    <button class="upgrade-btn" onclick="chooseUpgrade('speed10')">10% More Speed</button>
+                    <button class="upgrade-btn" onclick="chooseUpgrade('life2')">2 Extra Lives</button>
+                    <button class="upgrade-btn" onclick="chooseUpgrade('dash')">Dash Ability</button>
+                `;
+                document.getElementById('upgradeContainer').style.display = "block";
+            } else if (wave === 2) {
+                // Pause and show upgrades for wave 3 (choose ONE)
+                gameOver = true;
+                document.getElementById('upgradeTitle').textContent = "Choose a Wave 3 Upgrade!";
+                document.getElementById('upgradeButtons').innerHTML = `
+                    <button class="upgrade-btn" onclick="chooseUpgrade('speed20')">20% More Speed</button>
+                    <button class="upgrade-btn" onclick="chooseUpgrade('life2')">2 Extra Lives</button>
+                `;
+                document.getElementById('upgradeContainer').style.display = "block";
+            } else if (wave === 3) {
+                // Continue to Wave 4 - Intensive Laser Hell
+                wave = 4;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                setupGame();
+                startTimer();
+                laserPatternInterval = setInterval(spawnLaserPatterns, 800);
+                showWaveTitle("Wave 4 - Laser Hell");
+                gameOver = false;
+                animate();
+            } else if (wave === 4) {
+                // Continue to Wave 5 - Boss Wave
+                wave = 5;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                setupGame();
+                startBossWave();
+                animate();
+            } else if (wave === 5) {
+                // Continue to wave 6
+                wave = 6;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                playerHealth = 100;
+                maxPlayerHealth = 100;
+                damageCooldown = false;
+                setupGame();
+                startTimer();
+                document.getElementById('playerHealthBar').style.display = "block";
+                updateHealthBar();
+                laserPatternInterval = setInterval(spawnLaserPatterns, 2000);
+                setTimeout(() => { spawnRedCubesWave6(); }, 1000);
+                showWaveTitle("Wave 6 - Hell Begins");
+                gameOver = false;
+                animate();
+            } else if (wave === 6) {
+                // Continue to wave 7
+                wave = 7;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                maxPlayerHealth = 260; // +10 HP
+                playerHealth = maxPlayerHealth;
+                damageCooldown = false;
+                setupGame();
+                startTimer();
+                document.getElementById('playerHealthBar').style.display = "block";
+                updateHealthBar();
+                bulletRainInterval = setInterval(spawnBulletRain, 1500);
+                laserPatternInterval = setInterval(spawnLaserPatterns, 1000);
+                showWaveTitle("Wave 7 - Bullet Storm");
+                gameOver = false;
+                animate();
+            } else if (wave === 7) {
+                // Continue to wave 8
+                wave = 8;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                if (earthquakeInterval) clearInterval(earthquakeInterval);
+                maxPlayerHealth = 270; // +10 HP
+                playerHealth = maxPlayerHealth;
+                damageCooldown = false;
+                setupGame();
+                startTimer();
+                document.getElementById('playerHealthBar').style.display = "block";
+                updateHealthBar();
+                earthquakeInterval = setInterval(triggerEarthquake, 3000);
+                setTimeout(() => { spawnRedCubesWave8(); }, 500);
+                showWaveTitle("Wave 8 - Earthquake");
+                gameOver = false;
+                animate();
+            } else if (wave === 8) {
+                // Continue to wave 9
+                wave = 9;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                if (earthquakeInterval) clearInterval(earthquakeInterval);
+                maxPlayerHealth = 280; // +10 HP
+                playerHealth = maxPlayerHealth;
+                damageCooldown = false;
+                setupGame();
+                startTimer();
+                document.getElementById('playerHealthBar').style.display = "block";
+                updateHealthBar();
+                laserPatternInterval = setInterval(spawnLaserPatterns, 600);
+                bulletRainInterval = setInterval(spawnBulletRain, 1000);
+                earthquakeInterval = setInterval(triggerEarthquake, 4000);
+                setTimeout(() => { spawnRedCubesWave9(); }, 500);
+                showWaveTitle("Wave 9 - Chaos");
+                gameOver = false;
+                animate();
+            } else if (wave === 9) {
+                // Final boss wave 10 - Reset to 250 HP
+                wave = 10;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                if (earthquakeInterval) clearInterval(earthquakeInterval);
+                maxPlayerHealth = 250; // Reset to 250 for final boss
+                playerHealth = 250;
+                damageCooldown = false;
+                setupGame();
+                startFinalBoss();
+                animate();
+            } else {
+                document.getElementById('timer').textContent = "Victory!";
+                document.getElementById('restartBtn').style.display = "block";
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                if (earthquakeInterval) clearInterval(earthquakeInterval);
+            }
+        }
+        
+        // Helper function to show wave titles with modern styling
+        function showWaveTitle(titleText) {
+            // Hide all other wave titles first
+            document.getElementById('waveTitle').style.display = "none";
+            document.getElementById('wave4Title').style.display = "none";
+            let wave2Title = document.getElementById('wave2Title');
+            if (wave2Title) wave2Title.style.display = "none";
+            let waveErrorTitle = document.getElementById('waveErrorTitle');
+            if (waveErrorTitle) waveErrorTitle.style.display = "none";
+            
+            // Create a temporary wave announcement
+            let announcement = document.createElement('div');
+            announcement.style.position = 'absolute';
+            announcement.style.left = '50%';
+            announcement.style.top = '50%';
+            announcement.style.transform = 'translate(-50%, -50%)';
+            announcement.style.color = '#fff';
+            announcement.style.fontSize = '72px';
+            announcement.style.fontFamily = "'Orbitron', monospace";
+            announcement.style.fontWeight = '900';
+            announcement.style.zIndex = '1000';
+            announcement.style.textShadow = '0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #ff00ff, 0 0 80px #ff00ff';
+            announcement.style.pointerEvents = 'none';
+            announcement.style.letterSpacing = '5px';
+            announcement.style.background = 'rgba(10, 10, 26, 0.9)';
+            announcement.style.padding = '40px 80px';
+            announcement.style.borderRadius = '30px';
+            announcement.style.border = '4px solid #00ffff';
+            announcement.style.boxShadow = '0 0 60px #00ffff, 0 0 100px #ff00ff';
+            announcement.textContent = titleText;
+            document.body.appendChild(announcement);
+            
+            // Remove after 3 seconds with fade out
+            setTimeout(() => {
+                announcement.style.transition = 'opacity 0.5s ease-out';
+                announcement.style.opacity = '0';
+                setTimeout(() => {
+                    announcement.remove();
+                }, 500);
+            }, 2500);
+        }
+
+        window.chooseUpgrade = function(type) {
+            playClickSound(); // Play click sound
+            if (wave === 1) {
+                // Wave 1 upgrades
+                if (type === "speed10") upgrades.speed = (upgrades.speed || 1) * 1.1;
+                if (type === "life2") lives += 2;
+                if (type === "dash") {
+                    upgrades.dash = true;
+                    if (isMobile) {
+                        document.getElementById('mobileDashBtn').style.display = 'flex';
+                    }
+                }
+                wave++;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                setupGame();
+                startTimer();
+                laserPatternInterval = setInterval(spawnLaserPatterns, 5000);
+                showWaveTitle("Wave 2 - More Enemies");
+                gameOver = false;
+                animate();
+            } else if (wave === 2) {
+                // Wave 2 upgrades
+                if (type === "speed20") upgrades.speed = (upgrades.speed || 1) * 1.2;
+                if (type === "life2") lives += 2;
+                wave++;
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                setupGame();
+                startTimer();
+                laserPatternInterval = setInterval(spawnLaserPatterns, 2500);
+                showWaveTitle("Wave 3 - Laser Intro");
+                gameOver = false;
+                animate();
+            }
+        };
+
+        function loseLife() {
+            // God mode check
+            if (godMode && isAdmin) {
+                showCheatNotification("🛡️ God Mode protected you!");
+                return;
+            }
+            
+            // For wave 5 (first boss) and waves 6-10, health is already managed by takeDamage
+            if (wave === 5 || (wave >= 6 && wave <= 10)) {
+                // Reset health for next life with progressive values
+                if (wave === 5) {
+                    playerHealth = 100;
+                    maxPlayerHealth = 100;
+                } else if (wave === 6) {
+                    playerHealth = 250;
+                    maxPlayerHealth = 250;
+                } else if (wave === 7) {
+                    playerHealth = 260;
+                    maxPlayerHealth = 260;
+                } else if (wave === 8) {
+                    playerHealth = 270;
+                    maxPlayerHealth = 270;
+                } else if (wave === 9) {
+                    playerHealth = 280;
+                    maxPlayerHealth = 280;
+                } else if (wave === 10) {
+                    playerHealth = 250;
+                    maxPlayerHealth = 250;
+                }
+                damageCooldown = false;
+                updateHealthBar();
+                whiteCube.x = width / 2 - cubeSize / 2;
+                whiteCube.y = height / 2 - cubeSize / 2;
+                gameOver = true;
+                document.getElementById('timer').textContent = "Game Over";
+                document.getElementById('restartBtn').style.display = "block";
+                clearInterval(timerInterval);
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                if (earthquakeInterval) clearInterval(earthquakeInterval);
+                if (bossBulletInterval) clearInterval(bossBulletInterval);
+                if (bossLaserInterval) clearInterval(bossLaserInterval);
+                return;
+            }
+            
+            // Old lives system for waves 1-4
+            if (lives > 1) {
+                lives--;
+                updateLivesDisplay();
+                whiteCube.x = width / 2 - cubeSize / 2;
+                whiteCube.y = height / 2 - cubeSize / 2;
+            } else {
+                gameOver = true;
+                document.getElementById('timer').textContent = "Game Over";
+                document.getElementById('restartBtn').style.display = "block";
+                clearInterval(timerInterval);
+
+                // Show correct heading for wave 2 game over
+                if (wave === 2) {
+                    document.getElementById('waveTitle').style.display = "none";
+                    let wave2Title = document.getElementById('wave2Title');
+                    if (!wave2Title) {
+                        wave2Title = document.createElement("h1");
+                        wave2Title.id = "wave2Title";
+                        wave2Title.style.position = "absolute";
+                        wave2Title.style.top = "30px";
+                        wave2Title.style.left = "50%";
+                        wave2Title.style.transform = "translateX(-50%)";
+                        wave2Title.style.color = "#fff";
+                        wave2Title.style.fontSize = "48px";
+                        wave2Title.style.fontFamily = "Arial, Helvetica, sans-serif";
+                        wave2Title.style.zIndex = "2";
+                        wave2Title.style.textShadow = "0 0 10px #f00, 0 0 20px #fff";
+                        wave2Title.style.pointerEvents = "none";
+                        wave2Title.textContent = "Wave 2";
+                        document.body.appendChild(wave2Title);
+                    } else {
+                        wave2Title.style.display = "block";
+                    }
+                }
+            }
+        }
+        function restartGame() {
+            playClickSound(); // Play click sound
+            // Do NOT reset upgrades or wave, just reset lives and restart current wave
+            lives = upgrades.life ? 2 : 1;
+            
+            // Reset velocity for smooth restart
+            velocity = { x: 0, y: 0 };
+            
+            // Reset health for wave 5 (first boss) and waves 6-10
+            if (wave === 5) {
+                playerHealth = 100;
+                maxPlayerHealth = 100;
+                damageCooldown = false;
+            } else if (wave === 6) {
+                playerHealth = 250;
+                maxPlayerHealth = 250;
+                damageCooldown = false;
+            } else if (wave === 7) {
+                playerHealth = 260;
+                maxPlayerHealth = 260;
+                damageCooldown = false;
+            } else if (wave === 8) {
+                playerHealth = 270;
+                maxPlayerHealth = 270;
+                damageCooldown = false;
+            } else if (wave === 9) {
+                playerHealth = 280;
+                maxPlayerHealth = 280;
+                damageCooldown = false;
+            } else if (wave === 10) {
+                playerHealth = 250;
+                maxPlayerHealth = 250;
+                damageCooldown = false;
+            }
+            
+            setupGame();
+            
+            // Set up wave-specific mechanics
+            if (wave === 2) {
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                laserPatternInterval = setInterval(spawnLaserPatterns, 5000);
+            } else if (wave === 3) {
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                laserPatternInterval = setInterval(spawnLaserPatterns, 2500);
+            } else if (wave === 4) {
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                laserPatternInterval = setInterval(spawnLaserPatterns, 800);
+            } else if (wave === 5) {
+                startBossWave();
+            } else if (wave === 6) {
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                playerHealth = 250;
+                maxPlayerHealth = 250;
+                document.getElementById('playerHealthBar').style.display = "block";
+                updateHealthBar();
+                laserPatternInterval = setInterval(spawnLaserPatterns, 2000);
+                setTimeout(() => { spawnRedCubesWave6(); }, 1000);
+            } else if (wave === 7) {
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                playerHealth = 260;
+                maxPlayerHealth = 260;
+                document.getElementById('playerHealthBar').style.display = "block";
+                updateHealthBar();
+                bulletRainInterval = setInterval(spawnBulletRain, 1500);
+                laserPatternInterval = setInterval(spawnLaserPatterns, 1000);
+            } else if (wave === 8) {
+                if (earthquakeInterval) clearInterval(earthquakeInterval);
+                playerHealth = 270;
+                maxPlayerHealth = 270;
+                document.getElementById('playerHealthBar').style.display = "block";
+                updateHealthBar();
+                earthquakeInterval = setInterval(triggerEarthquake, 3000);
+                setTimeout(() => { spawnRedCubesWave8(); }, 500);
+            } else if (wave === 9) {
+                if (laserPatternInterval) clearInterval(laserPatternInterval);
+                if (bulletRainInterval) clearInterval(bulletRainInterval);
+                if (earthquakeInterval) clearInterval(earthquakeInterval);
+                playerHealth = 280;
+                maxPlayerHealth = 280;
+                document.getElementById('playerHealthBar').style.display = "block";
+                updateHealthBar();
+                laserPatternInterval = setInterval(spawnLaserPatterns, 600);
+                bulletRainInterval = setInterval(spawnBulletRain, 1000);
+                earthquakeInterval = setInterval(triggerEarthquake, 4000);
+                setTimeout(() => { spawnRedCubesWave9(); }, 500);
+            } else if (wave === 10) {
+                startFinalBoss();
+            }
+            
+            if (wave !== 5 && wave !== 10) {
+                startTimer();
+            }
+            animate();
+        }
+
+        // --- Responsive ---
+        window.addEventListener('resize', () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        });
+
+        // --- Boss Movement ---
+        function moveBoss() {
+            if (!boss) return;
+            boss.x += bossMoveDir * bossMoveSpeed;
+            if (boss.x <= 0) {
+                boss.x = 0;
+                bossMoveDir = 1;
+            }
+            if (boss.x + boss.size >= width) {
+                boss.x = width - boss.size;
+                bossMoveDir = -1;
+            }
+        }
+
+        // --- Wave 6-10 Functions ---
+        function spawnRedCubesWave6() {
+            for (let i = 0; i < 4; i++) {
+                let pos = randomEdgePosition();
+                let actualSize = isMobile ? 40 * mobileCubeSizeMultiplier : 40;
+                redCubes.push({
+                    x: pos.x,
+                    y: pos.y,
+                    color: "#f00",
+                    speed: 4.5 + Math.random(),
+                    size: actualSize
+                });
+            }
+        }
+        
+        function spawnRedCubesWave8() {
+            for (let i = 0; i < 5; i++) {
+                let pos = randomEdgePosition();
+                let actualSize = isMobile ? 35 * mobileCubeSizeMultiplier : 35;
+                redCubes.push({
+                    x: pos.x,
+                    y: pos.y,
+                    color: "#f00",
+                    speed: 5 + Math.random(),
+                    size: actualSize
+                });
+            }
+        }
+        
+        function spawnRedCubesWave9() {
+            for (let i = 0; i < 8; i++) {
+                let pos = randomEdgePosition();
+                let actualSize = isMobile ? 30 * mobileCubeSizeMultiplier : 30;
+                redCubes.push({
+                    x: pos.x,
+                    y: pos.y,
+                    color: "#f00",
+                    speed: 5.5 + Math.random(),
+                    size: actualSize
+                });
+            }
+        }
+        
+        function spawnBulletRain() {
+            for (let i = 0; i < 8; i++) {
+                let bulletSize = isMobile ? 15 * mobileCubeSizeMultiplier : 15;
+                bulletRain.push({
+                    x: Math.random() * width,
+                    y: -20,
+                    size: bulletSize,
+                    color: "#ff0",
+                    speed: 8 + Math.random() * 3
+                });
+            }
+        }
+        
+        function moveBulletRain() {
+            let speedMultiplier = (slowMotionActive && isAdmin) ? 0.3 : 1;
+            for (let i = 0; i < bulletRain.length; i++) {
+                bulletRain[i].y += bulletRain[i].speed * speedMultiplier;
+            }
+            bulletRain = bulletRain.filter(b => b.y < height + 50);
+        }
+        
+        function drawBulletRain() {
+            for (let b of bulletRain) {
+                ctx.save();
+                ctx.fillStyle = b.color;
+                if (!lowGraphicsMode) {
+                    ctx.shadowColor = "#ff0";
+                    ctx.shadowBlur = 15;
+                }
+                ctx.fillRect(b.x, b.y, b.size, b.size);
+                ctx.restore();
+            }
+        }
+        
+        function checkBulletRainCollision() {
+            for (let b of bulletRain) {
+                if (
+                    whiteCube.x < b.x + b.size &&
+                    whiteCube.x + cubeSize > b.x &&
+                    whiteCube.y < b.y + b.size &&
+                    whiteCube.y + cubeSize > b.y
+                ) {
+                    if (wave >= 6 && wave <= 10) {
+                        if (!damageCooldown && takeDamage(20)) {
+                            loseLife();
+                        }
+                    } else {
+                        loseLife();
+                    }
+                    return;
+                }
+            }
+        }
+        
+        function triggerEarthquake() {
+            earthquakeActive = true;
+            earthquakeZones = [];
+            // Create 3-5 danger zones on the ground (bigger zones)
+            let zoneCount = Math.floor(Math.random() * 3) + 3;
+            for (let i = 0; i < zoneCount; i++) {
+                earthquakeZones.push({
+                    x: Math.random() * (width - 250),
+                    y: height - 150,
+                    width: 250,
+                    height: 150,
+                    warning: true
+                });
+            }
+            // Warning phase
+            setTimeout(() => {
+                for (let zone of earthquakeZones) {
+                    zone.warning = false;
+                }
+                // Check damage after 500ms
+                setTimeout(() => {
+                    checkEarthquakeDamage();
+                    earthquakeActive = false;
+                    earthquakeZones = [];
+                }, 500);
+            }, 1000);
+        }
+        
+        function drawEarthquake() {
+            if (earthquakeActive) {
+                // Screen shake effect
+                screenShake.x = (Math.random() - 0.5) * 10;
+                screenShake.y = (Math.random() - 0.5) * 10;
+                
+                for (let zone of earthquakeZones) {
+                    ctx.save();
+                    if (zone.warning) {
+                        ctx.fillStyle = "rgba(255, 165, 0, 0.4)";
+                        ctx.strokeStyle = "#ffa500";
+                    } else {
+                        ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
+                        ctx.strokeStyle = "#f00";
+                    }
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+                    ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+                    ctx.restore();
+                }
+            } else {
+                screenShake.x = 0;
+                screenShake.y = 0;
+            }
+        }
+        
+        function checkEarthquakeDamage() {
+            for (let zone of earthquakeZones) {
+                if (!zone.warning &&
+                    whiteCube.x < zone.x + zone.width &&
+                    whiteCube.x + cubeSize > zone.x &&
+                    whiteCube.y < zone.y + zone.height &&
+                    whiteCube.y + cubeSize > zone.y
+                ) {
+                    if (wave >= 6 && wave <= 10) {
+                        if (!damageCooldown && takeDamage(50)) {
+                            loseLife();
+                        }
+                    } else {
+                        loseLife();
+                    }
+                    return;
+                }
+            }
+        }
+        
+        function startFinalBoss() {
+            finalBossActive = true;
+            finalBossHealth = 1000; // Boss has 1000 HP
+            playerHealth = 250;
+            maxPlayerHealth = 250;
+            damageCooldown = false;
+            
+            // Show boss health bar at top
+            document.getElementById('bossHealthBar').style.display = "block";
+            document.getElementById('bossHealthValue').textContent = finalBossHealth;
+            
+            // Show player health bar at bottom
+            document.getElementById('playerHealthBar').style.display = "block";
+            updateHealthBar();
+            
+            document.getElementById('timer').textContent = "FINAL BOSS";
+            if (timerInterval) clearInterval(timerInterval);
+            
+            // Final boss size scaled for mobile
+            let finalBossSize = isMobile ? 300 * mobileCubeSizeMultiplier : 300;
+            let finalBossX = width / 2 - finalBossSize / 2;
+            finalBoss = { x: finalBossX, y: 50, size: finalBossSize, color: "#f0f" };
+            bossBullets = [];
+            bossGreenCube = null;
+            bossGreenCubeActive = false;
+            healingCubes = [];
+            finalBossGreenCubes = []; // Initialize array for multiple green cubes
+            bossMoveDir = 1; // Reset boss movement direction
+            
+            // Final boss shoots faster and has all mechanics
+            bossBulletInterval = setInterval(() => { shootFinalBossBullets(); }, 800);
+            laserPatternInterval = setInterval(spawnLaserPatterns, 900);
+            bulletRainInterval = setInterval(spawnBulletRain, 1200);
+            earthquakeInterval = setInterval(triggerEarthquake, 5000);
+            
+            // Spawn 2 green cubes initially
+            spawnBossGreenCube();
+            
+            // Teleport green cubes to random locations every 10 seconds
+            greenCubeTeleportInterval = setInterval(() => {
+                if (finalBossActive && finalBossGreenCubes.length > 0) {
+                    spawnBossGreenCube(); // Respawn cubes at new random locations
+                }
+            }, 10000); // Every 10 seconds
+            
+            healingCubeInterval = setInterval(() => { spawnHealingCube(); }, 10000); // Every 10 seconds
+            
+            // Show final boss announcement
+            showWaveTitle("Wave 10 - FINAL BOSS");
+        }
+        
+        function shootFinalBossBullets() {
+            if (!finalBossActive) return;
+            let centerX = finalBoss.x + finalBoss.size / 2;
+            let centerY = finalBoss.y + finalBoss.size / 2;
+            let bulletSize = isMobile ? 20 * mobileCubeSizeMultiplier : 20;
+            // Spiral pattern
+            for (let i = 0; i < 20; i++) {
+                let angle = (2 * Math.PI / 20) * i;
+                bossBullets.push({
+                    x: centerX,
+                    y: centerY,
+                    size: bulletSize,
+                    color: "#0ff",
+                    dx: Math.cos(angle) * 8,
+                    dy: Math.sin(angle) * 8
+                });
+            }
+        }
+        
+        function drawFinalBoss() {
+            if (!finalBossActive || !finalBoss) return;
+            ctx.save();
+            ctx.fillStyle = finalBoss.color;
+            if (!lowGraphicsMode) {
+                ctx.shadowColor = "#f0f";
+                ctx.shadowBlur = 40;
+            }
+            ctx.fillRect(finalBoss.x, finalBoss.y, finalBoss.size, finalBoss.size);
+            // Add pulsing effect
+            if (!lowGraphicsMode) {
+                let pulseSize = Math.sin(Date.now() / 200) * 10;
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 5;
+                ctx.strokeRect(finalBoss.x - pulseSize/2, finalBoss.y - pulseSize/2, 
+                    finalBoss.size + pulseSize, finalBoss.size + pulseSize);
+            }
+            ctx.restore();
+        }
+        
+        function moveFinalBoss() {
+            if (!finalBoss) return;
+            finalBoss.x += bossMoveDir * 6;
+            if (finalBoss.x <= 0) {
+                finalBoss.x = 0;
+                bossMoveDir = 1;
+            }
+            if (finalBoss.x + finalBoss.size >= width) {
+                finalBoss.x = width - finalBoss.size;
+                bossMoveDir = -1;
+            }
+        }
+        
+        function checkFinalBossGreenCubeCollision() {
+            // Check collision with multiple green cubes in Wave 10
+            for (let i = 0; i < finalBossGreenCubes.length; i++) {
+                let cube = finalBossGreenCubes[i];
+                if (!cube.active) continue;
+                
+                if (
+                    whiteCube.x < cube.x + cube.size &&
+                    whiteCube.x + cubeSize > cube.x &&
+                    whiteCube.y < cube.y + cube.size &&
+                    whiteCube.y + cubeSize > cube.y
+                ) {
+                    finalBossHealth -= 50; // Each green cube does 50 damage (20 hits needed)
+                    if (finalBossHealth < 0) finalBossHealth = 0;
+                    document.getElementById('bossHealthValue').textContent = finalBossHealth;
+                    
+                    // Mark cube as inactive and remove it
+                    cube.active = false;
+                    finalBossGreenCubes.splice(i, 1);
+                    i--;
+                    
+                    if (finalBossHealth <= 0) {
+                        finalBossActive = false;
+                        gameOver = true;
+                        document.getElementById('bossHealthBar').style.display = "none";
+                        document.getElementById('timer').textContent = "YOU WIN! GAME COMPLETE!";
+                        clearInterval(bossBulletInterval);
+                        clearInterval(laserPatternInterval);
+                        clearInterval(bulletRainInterval);
+                        clearInterval(earthquakeInterval);
+                        if (bossGreenCubeInterval) clearInterval(bossGreenCubeInterval);
+                        if (greenCubeTeleportInterval) clearInterval(greenCubeTeleportInterval);
+                        if (healingCubeInterval) clearInterval(healingCubeInterval);
+                        setTimeout(() => {
+                            document.getElementById('restartBtn').style.display = "block";
+                        }, 1500);
+                    }
+                    break; // Only one cube collision per frame
+                }
+            }
+        }
+        
+        // Healing cube functions
+        function spawnHealingCube() {
+            // Works for both Wave 5 boss and Wave 10 final boss
+            if (!bossActive && !finalBossActive) return;
+            let edge = Math.floor(Math.random() * 4);
+            let x, y;
+            let size = isMobile ? 40 * mobileCubeSizeMultiplier : 40;
+            if (edge === 0) { x = 0; y = Math.random() * (height - size); }
+            else if (edge === 1) { x = width - size; y = Math.random() * (height - size); }
+            else if (edge === 2) { x = Math.random() * (width - size); y = 0; }
+            else { x = Math.random() * (width - size); y = height - size; }
+            healingCubes.push({ x, y, size, color: "#fff", active: true });
+        }
+        
+        function drawHealingCubes() {
+            for (let cube of healingCubes) {
+                if (cube.active) {
+                    ctx.save();
+                    ctx.fillStyle = cube.color;
+                    if (!lowGraphicsMode) {
+                        ctx.shadowColor = "#fff";
+                        ctx.shadowBlur = 25;
+                    }
+                    ctx.fillRect(cube.x, cube.y, cube.size, cube.size);
+                    // Add white cross/plus symbol for healing (scaled for mobile)
+                    ctx.fillStyle = "#0f0";
+                    let crossWidth = cube.size * 0.25;
+                    let crossHeight = cube.size * 0.6;
+                    let crossThick = cube.size * 0.25;
+                    ctx.fillRect(cube.x + cube.size * 0.375, cube.y + cube.size * 0.2, crossWidth, crossHeight);
+                    ctx.fillRect(cube.x + cube.size * 0.2, cube.y + cube.size * 0.375, crossHeight, crossThick);
+                    ctx.restore();
+                }
+            }
+        }
+        
+        function checkHealingCubeCollision() {
+            for (let i = 0; i < healingCubes.length; i++) {
+                let cube = healingCubes[i];
+                if (!cube.active) continue;
+                
+                if (
+                    whiteCube.x < cube.x + cube.size &&
+                    whiteCube.x + cubeSize > cube.x &&
+                    whiteCube.y < cube.y + cube.size &&
+                    whiteCube.y + cubeSize > cube.y
+                ) {
+                    // Heal amount based on wave
+                    let healAmount = (wave === 5) ? 10 : 20; // 10 HP for Wave 5, 20 HP for Wave 10
+                    playerHealth += healAmount;
+                    if (playerHealth > maxPlayerHealth) playerHealth = maxPlayerHealth;
+                    updateHealthBar();
+                    cube.active = false;
+                    healingCubes.splice(i, 1);
+                    i--;
+                    
+                    // Show heal notification
+                    showHealNotification(healAmount);
+                }
+            }
+        }
+        
+        function showHealNotification(amount) {
+            let notification = document.createElement('div');
+            notification.textContent = "+" + amount + " HP";
+            notification.style.position = 'absolute';
+            notification.style.left = '50%';
+            notification.style.top = '40%';
+            notification.style.transform = 'translate(-50%, -50%)';
+            notification.style.background = 'rgba(0, 255, 0, 0.9)';
+            notification.style.color = '#fff';
+            notification.style.padding = '15px 30px';
+            notification.style.borderRadius = '10px';
+            notification.style.fontSize = '32px';
+            notification.style.fontFamily = "'Orbitron', monospace";
+            notification.style.fontWeight = 'bold';
+            notification.style.zIndex = '1000';
+            notification.style.boxShadow = '0 0 30px #0f0';
+            notification.style.border = '3px solid #fff';
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.remove();
+            }, 800);
+        }
+
+        // --- Mobile Controls Initialization ---
+        function initMobileControls() {
+            const mobileControls = document.getElementById('mobileControls');
+            const joystick = document.getElementById('mobileJoystick');
+            const knob = document.getElementById('joystickKnob');
+            const dashBtn = document.getElementById('mobileDashBtn');
+            
+            mobileControls.style.display = 'block';
+            
+            // Joystick touch handling
+            let joystickTouch = null;
+            const joystickRect = joystick.getBoundingClientRect();
+            const joystickCenterX = joystickRect.width / 2;
+            const joystickCenterY = joystickRect.height / 2;
+            const joystickRadius = joystickRect.width / 2;
+            
+            joystick.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                joystickTouch = e.touches[0];
+                mobileJoystick.active = true;
+                updateJoystick(e.touches[0]);
+            });
+            
+            joystick.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (mobileJoystick.active) {
+                    updateJoystick(e.touches[0]);
+                }
+            });
+            
+            joystick.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                mobileJoystick.active = false;
+                mobileJoystick.deltaX = 0;
+                mobileJoystick.deltaY = 0;
+                knob.style.transform = 'translate(-50%, -50%)';
+            });
+            
+            function updateJoystick(touch) {
+                const rect = joystick.getBoundingClientRect();
+                const touchX = touch.clientX - rect.left;
+                const touchY = touch.clientY - rect.top;
+                
+                let deltaX = touchX - joystickCenterX;
+                let deltaY = touchY - joystickCenterY;
+                
+                // Limit to joystick radius
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const maxDistance = joystickRadius - 30;
+                
+                if (distance > maxDistance) {
+                    deltaX = (deltaX / distance) * maxDistance;
+                    deltaY = (deltaY / distance) * maxDistance;
+                }
+                
+                // Update knob position
+                knob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+                
+                // Normalize for movement (-1 to 1)
+                mobileJoystick.deltaX = deltaX / maxDistance;
+                mobileJoystick.deltaY = deltaY / maxDistance;
+            }
+            
+            // Dash button handling
+            dashBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (mobileDashReady) {
+                    performDash();
+                }
+            });
+            
+            // Hide dash button initially if no dash upgrade
+            if (!upgrades.dash) {
+                dashBtn.style.display = 'none';
+            }
+        }
+        
+        // Update dash button visibility when upgrade is acquired
+        const originalChooseUpgrade = window.chooseUpgrade;
+        window.chooseUpgrade = function(type) {
+            originalChooseUpgrade(type);
+            if (isMobile && type === 'dash' && upgrades.dash) {
+                document.getElementById('mobileDashBtn').style.display = 'flex';
+            }
+        };
+
+        // --- Start ---
+        // Game will start after login
+        // setupGame();
+        // startTimer();
+        // animate();
+        
+        // Add hover sound effects to all buttons
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get all interactive elements
+            const buttons = document.querySelectorAll('button, .upgrade-btn, .cheat-btn');
+            
+            buttons.forEach(button => {
+                button.addEventListener('mouseenter', () => {
+                    playHoverSound();
+                });
+            });
+            
+            // Play page transition sound
+            playPageTransitionSound();
+        });
+        
+        function playPageTransitionSound() {
+            const now = audioContext.currentTime;
+            
+            // Create a pleasant chord progression for page transition
+            const notes = [
+                { freq: 523.25, start: 0, duration: 0.8 },      // C5
+                { freq: 659.25, start: 0.3, duration: 0.8 },    // E5
+                { freq: 783.99, start: 0.6, duration: 1.4 },    // G5
+                { freq: 1046.50, start: 0.9, duration: 1.1 }    // C6
+            ];
+            
+            notes.forEach(note => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                osc.frequency.value = note.freq;
+                osc.type = 'sine';
+                
+                const startTime = now + note.start;
+                const endTime = startTime + note.duration;
+                
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.01, endTime);
+                
+                osc.start(startTime);
+                osc.stop(endTime);
+            });
+        }
+    </script>
+    
+
+    
+</body>
+</html>
